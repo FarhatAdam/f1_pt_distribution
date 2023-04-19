@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+
+<!-- Load d3.js -->
+<script src="https://d3js.org/d3.v6.js"></script>
+<script src="http://code.jquery.com/jquery-1.11.0.min.js"></script>
+
+<title> Percent of Season Points Earned by Teams, 2000-2022</title>
+
+<!-- Create a div where the graph will take place -->
+<div id="my_dataviz"></div>
+
+<script>
+
+    // set the dimensions and margins of the graph
+    const margin = {top: 50, right: 100, bottom: 50, left: 50},
+        width = 1000 - margin.left - margin.right,
+        height = 500 - margin.top - margin.bottom;
+
+    // append the svg object to the body of the page
+    const svg = d3.select("#my_dataviz")
+        .append("svg")
+        .attr("width", width + margin.left + margin.right)
+        .attr("height", height + margin.top + margin.bottom)
+        .append("g")
+        .attr("transform", `translate(${margin.left},${margin.top})`);
+
+    const team_colors = {
+        'Ferrari': '#FF2800' ,
+        'McLaren' : '#FF8000' ,
+        'Williams' : '#00A0DE' ,
+        'BAR' : '#FAB41E' ,
+        'Renault' : '#FFF500' ,
+        'BMW Sauber' : '#638CB3' ,
+        'Brawn' : '#b7e007' ,
+        'Red Bull' : '#1E41FF' ,
+        'Mercedes' : '#00D2BE' ,
+        'Racing Point' : '#F596C8',
+        'Rest' : '#808080'};
+
+    const team_names = Object.keys(team_colors)
+
+    //console.log(Object.keys(team_colors))
+
+
+    // Array method from : https://www.freecodecamp.org/news/javascript-range-create-an-array-of-numbers-with-the-from-method/
+    const arrayRange = (start, stop, step) =>
+        Array.from(
+            { length: (stop - start) / step + 1 },
+            (value, index) => start + index * step
+        );
+
+    //create array of years to pass into d3.ScaleOrdinal
+    const myYears = arrayRange(2000,2022,1);
+
+
+    var mydata = d3.csv("transformed_data/winners_only_wide.csv")
+
+    mydata.then(function(data) {
+
+        const subgroups = data.columns.slice(1)
+        console.log(subgroups)
+
+        const groups = data.map(d => (d.year))
+
+        console.log(groups)
+
+        const x = d3.scaleBand()
+            .domain(groups)
+            .range([0, width])
+            .padding([0.2])
+
+        svg.append("g")
+            .attr("transform", `translate(0, ${height})`)
+            .call(d3.axisBottom(x).tickSizeOuter(0));
+
+        const y = d3.scaleLinear()
+            .domain([0, 100])
+            .range([ height, 0 ]);
+
+        svg.append("g")
+            .call(d3.axisLeft(y));
+
+        const color = d3.scaleOrdinal()
+            .domain(Object.keys(team_colors))
+            .range(Object.values(team_colors))
+
+        const stackedData = d3.stack()
+            .keys(subgroups).order(d3.stackOrderInsideOut)
+            (data)
+
+
+
+        // TOOLTIP
+
+        const tooltip = d3.select("#my_dataviz")
+            .append("div")
+            .style("opacity", 0)
+            .attr("class", "tooltip")
+            .style("background-color", "white")
+            .style("border", "solid")
+            .style("border-width", "2px")
+            .style("border-radius", "5px")
+            .style("padding", "10px")
+
+        // Three function that change the tooltip when user hover / move / leave a cell
+        const mouseover = function(event, d) {
+            const subgroupName = d3.select(this.parentNode).datum().key;
+            const subgroupValue = d.data[subgroupName];
+
+            console.log(subgroupName)
+
+            // Reduce opacity of all rect to 0.2
+            d3.selectAll(".myRect").style("opacity", 0.2)
+
+            // Highlight all rects of this subgroup with opacity 1. It is possible to select them since they have a specific class = their name.
+            d3.selectAll(".myRect."+ subgroupName).style("opacity",1)
+
+
+
+            tooltip
+                .html("Team: " + subgroupName + "<br>" + "% Season Points: " + subgroupValue)
+                .style("opacity", 1);
+
+
+
+        }
+        const mousemove = function(event, d) {
+            tooltip.style("transform","translateY(-35%)")
+                .style("left",(event.x)/2+"px")
+                .style("top",(event.y)/2-30+"px")
+        }
+        const mouseleave = function(event, d) {
+            tooltip
+                .style("opacity", 0);
+            // Back to normal opacity: 1
+            d3.selectAll(".myRect")
+                .style("opacity",1)
+        }
+
+        // Show the bars
+        svg.append("g")
+            .selectAll("g")
+            // Enter in the stack data = loop key per key = group per group
+            .data(stackedData)
+            .join("g")
+            .attr("fill", d => team_colors[d.key])
+            .attr("class", d => "myRect " + d.key)
+            .selectAll("rect")
+            // enter a second time = loop subgroup per subgroup to add all rectangles
+            .data(d => d)
+            .join("rect")
+                .attr("x", d =>  x(d.data.year))
+                .attr("y", d => y(d[1]))
+                .attr("height", d => y(d[0]) - y(d[1]))
+                .attr("width",x.bandwidth())
+                .attr("stroke", "grey")
+            .on("mouseover", mouseover)
+            .on("mousemove", mousemove)
+            .on("mouseleave", mouseleave)
+
+        svg.append("text")
+            .attr("x", (width / 2))
+            .attr("y", 0 - (margin.top / 2))
+            .attr("text-anchor", "middle")
+            .style("font-size", "20px")
+            .text("% Total Season Points Earned by F1 Teams, 2000-2022");
+
+
+    });
+
+
+
+
+
+
+</script>

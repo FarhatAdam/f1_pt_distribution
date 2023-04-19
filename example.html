@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <meta charset="utf-8">
 
@@ -23,42 +24,23 @@
         .attr("transform",
             `translate(${margin.left}, ${margin.top})`);
 
-    const team_colors = {
-        'Ferrari': '#FF2800' ,
-        'McLaren' : '#FF8000' ,
-        'Williams' : '#00A0DE' ,
-        'BAR' : '#FAB41E' ,
-        'Renault' : '#FFF500' ,
-        'BMW Sauber' : '#638CB3' ,
-        'Brawn' : '#b7e007' ,
-        'Red Bull' : '#1E41FF' ,
-        'Mercedes' : '#00D2BE' ,
-        'Racing Point' : '#F596C8',
-        'Rest' : '#808080'};
-
-    console.log( d3.csv("transformed_data/top_3_constructors.csv"))
+    console.log(d3.csv("https://raw.githubusercontent.com/holtzy/data_to_viz/master/Example_dataset/5_OneCatSevNumOrdered.csv"))
 
     //Read the data
-    d3.csv("transformed_data/transformed_constructors.csv").then( function(data) {
+    d3.csv("https://raw.githubusercontent.com/holtzy/data_to_viz/master/Example_dataset/5_OneCatSevNumOrdered.csv").then( function(data) {
 
         // group the data: one array for each value of the X axis.
         const sumstat = d3.group(data, d => d.year);
 
         // Stack the data: each group will be represented on top of each other
-        const mygroups = ["Ferrari", "McLaren", "Williams", "BAR", "Renault", "BMW Sauber",
-            "Brawn", "Red Bull", "Mercedes", "Racing Point", "Rest"] // list of group names
-
-        const mygroup = [1,2,3,4,5,6,7,8,9,10,11] // list of group names
-
+        const mygroups = ["Helen", "Amanda", "Ashley"] // list of group names
+        const mygroup = [1,2,3] // list of group names
         const stackedData = d3.stack()
             .keys(mygroup)
             .value(function(d, key){
-                return d[1][key].rank
+                return d[1][key].n
             })
             (sumstat)
-
-        console.log(sumstat)
-        console.log(stackedData)
 
         // Add X axis --> it is a date format
         const x = d3.scaleLinear()
@@ -70,7 +52,7 @@
 
         // Add Y axis
         const y = d3.scaleLinear()
-            .domain([0,100])
+            .domain([0, d3.max(data, function(d) { return +d.n; })*1.2])
             .range([ height, 0 ]);
         svg.append("g")
             .call(d3.axisLeft(y));
@@ -78,16 +60,14 @@
         // color palette
         const color = d3.scaleOrdinal()
             .domain(mygroups)
-            .range(['#FF2800','#FF8000','#00A0DE','#FAB41E','#FFF500',
-                '#638CB3','#b7e007','#1E41FF','#00D2BE','#F596C8',
-                '#808080'])
+            .range(['#e41a1c','#377eb8','#4daf4a','#984ea3','#ff7f00','#ffff33','#a65628','#f781bf','#999999'])
 
         // Show the areas
         svg
             .selectAll("mylayers")
             .data(stackedData)
             .join("path")
-            .style("fill", function(d) { top3Name = mygroups[d.key-1] ;  return color(top3Name); })
+            .style("fill", function(d) { name = mygroups[d.key-1] ;  return color(name); })
             .attr("d", d3.area()
                 .x(function(d, i) { return x(d.data[0]); })
                 .y0(function(d) { return y(d[0]); })
