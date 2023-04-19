@@ -13,8 +13,8 @@
 <script>
 
     // set the dimensions and margins of the graph
-    const margin = {top: 50, right: 100, bottom: 50, left: 50},
-        width = 1000 - margin.left - margin.right,
+    const margin = {top: 50, right: 400, bottom: 50, left: 50},
+        width = 1200 - margin.left - margin.right,
         height = 500 - margin.top - margin.bottom;
 
     // append the svg object to the body of the page
@@ -31,12 +31,13 @@
         'Williams' : '#00A0DE' ,
         'BAR' : '#FAB41E' ,
         'Renault' : '#FFF500' ,
-        'BMW Sauber' : '#638CB3' ,
+        'BMW_Sauber' : '#638CB3' ,
         'Brawn' : '#b7e007' ,
-        'Red Bull' : '#1E41FF' ,
+        'Red_Bull' : '#1E41FF' ,
         'Mercedes' : '#00D2BE' ,
-        'Racing Point' : '#F596C8',
-        'Rest' : '#808080'};
+        'Racing_Point' : '#F596C8',
+       // 'Rest' : '#FFFFFFD6'
+    };
 
     const team_names = Object.keys(team_colors)
 
@@ -56,19 +57,21 @@
 
     var mydata = d3.csv("transformed_data/winners_only_wide.csv")
 
+
     mydata.then(function(data) {
 
         const subgroups = data.columns.slice(1)
-        console.log(subgroups)
 
         const groups = data.map(d => (d.year))
 
-        console.log(groups)
+        //console.log(groups)
 
         const x = d3.scaleBand()
             .domain(groups)
             .range([0, width])
-            .padding([0.2])
+            .padding([0.2]);
+
+
 
         svg.append("g")
             .attr("transform", `translate(0, ${height})`)
@@ -95,6 +98,7 @@
 
         const tooltip = d3.select("#my_dataviz")
             .append("div")
+            .style("width","200px")
             .style("opacity", 0)
             .attr("class", "tooltip")
             .style("background-color", "white")
@@ -105,28 +109,39 @@
 
         // Three function that change the tooltip when user hover / move / leave a cell
         const mouseover = function(event, d) {
-            const subgroupName = d3.select(this.parentNode).datum().key;
-            const subgroupValue = d.data[subgroupName];
+            const subgroupName = d3.select(this.parentNode).datum().key; //get team name
+            const subgroupValue = parseFloat(d.data[subgroupName]).toFixed(2); //round to 2 dec
 
             console.log(subgroupName)
 
             // Reduce opacity of all rect to 0.2
             d3.selectAll(".myRect").style("opacity", 0.2)
+            d3.selectAll(".legend").style("opacity", 0.2)
 
             // Highlight all rects of this subgroup with opacity 1. It is possible to select them since they have a specific class = their name.
-            d3.selectAll(".myRect."+ subgroupName).style("opacity",1)
+            //d3.select(".myRect."+subgroupName).style("opacity",1)
 
+            d3.select(".myRect."+subgroupName).style("opacity",1)
+            d3.select(".legend."+subgroupName).style("opacity",1)
+
+            d3.select(this).style('stroke','black')
+            d3.select(this).style('stroke-width', 4)
+            d3.select(this).style('opacity', 1);
 
 
             tooltip
-                .html("Team: " + subgroupName + "<br>" + "% Season Points: " + subgroupValue)
-                .style("opacity", 1);
+                .html("Team &nbsp &nbsp &nbsp &nbsp : " + subgroupName + "<br>" +
+                        "%Points &nbsp &nbsp: " + subgroupValue + "</br>" +
+                        "Year &nbsp &nbsp &nbsp &nbsp &nbsp: " + d.data.year)
+                .style("opacity", 1)
+                .style("left", (d3.mouse(this)[0]+70) + "px")
+                .style("top", (d3.mouse(this)[1]) + "px");
 
 
 
         }
         const mousemove = function(event, d) {
-            tooltip.style("transform","translateY(-35%)")
+            tooltip.style("transform","translate(50,50)")
                 .style("left",(event.x)/2+"px")
                 .style("top",(event.y)/2-30+"px")
         }
@@ -136,10 +151,18 @@
             // Back to normal opacity: 1
             d3.selectAll(".myRect")
                 .style("opacity",1)
+            d3.selectAll('rect')
+                .style('stroke','grey')
+            d3.selectAll('rect')
+                .style('stroke-width', 1)
+            d3.selectAll('rect')
+                .style('opacity', 1)
+
         }
 
+
         // Show the bars
-        svg.append("g")
+        const bars = svg.append("g")
             .selectAll("g")
             // Enter in the stack data = loop key per key = group per group
             .data(stackedData)
@@ -155,9 +178,14 @@
                 .attr("height", d => y(d[0]) - y(d[1]))
                 .attr("width",x.bandwidth())
                 .attr("stroke", "grey")
+                .attr("stroke-width", 2);
+
+
+        bars
             .on("mouseover", mouseover)
             .on("mousemove", mousemove)
             .on("mouseleave", mouseleave)
+
 
         svg.append("text")
             .attr("x", (width / 2))
@@ -166,6 +194,36 @@
             .style("font-size", "20px")
             .text("% Total Season Points Earned by F1 Teams, 2000-2022");
 
+
+        var legend_size = 20
+        var legend_x = 800
+
+
+        // Legend adapted form this website : https://d3-graph-gallery.com/graph/custom_legend.html
+        svg.selectAll("mylegends")
+            .data(Object.keys(team_colors))
+            .enter()
+            .append("rect")
+            .attr("class", 'legend')
+            .attr("x", legend_x)
+            .attr("y", function(d,i){ return 100 + i*(legend_size+5)}) // 100 is where the first dot appears. 25 is the distance between dots
+            .attr("width", legend_size)
+            .attr("height", legend_size)
+            .style("fill", function(d){ return team_colors[d]})
+            .attr("class", function(d){return 'legend'+d})
+        .on("mouseover", mouseover)
+        .on("mousemove", mousemove)
+        .on("mouseleave", mouseleave)
+
+        svg.selectAll("mylabels")
+            .data(Object.keys(team_colors))
+            .enter()
+            .append("text")
+            .attr("x", legend_x + legend_size*1.2)
+            .attr("y", function(d,i){ return 100 + i*(legend_size+5) + (legend_size/2)}) // 100 is where the first dot appears. 25 is the distance between dots
+            .text(function(d){ return d})
+            .attr("text-anchor", "left")
+            .style("alignment-baseline", "middle")
 
     });
 
