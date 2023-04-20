@@ -7,17 +7,30 @@
 
 <title> Percent of Season Points Earned by Teams, 2000-2022</title>
 
+
+
 <!-- Create a div where the graph will take place -->
 <div id="my_dataviz"></div>
+
+<style>
+    #my_dataviz {
+        position: relative;
+    }
+    .tooltip {
+        position: absolute;
+    }
+</style>
 
 <script>
 
     // set the dimensions and margins of the graph
-    const margin = {top: 50, right: 400, bottom: 50, left: 50},
+    const margin = {top: 100, right: 400, bottom: 50, left: 50},
         width = 1200 - margin.left - margin.right,
-        height = 500 - margin.top - margin.bottom;
+        height = 600 - margin.top - margin.bottom;
 
     // append the svg object to the body of the page
+
+
     const svg = d3.select("#my_dataviz")
         .append("svg")
         .attr("width", width + margin.left + margin.right)
@@ -36,10 +49,9 @@
         'Red_Bull' : '#1E41FF' ,
         'Mercedes' : '#00D2BE' ,
         'Racing_Point' : '#F596C8',
-       // 'Rest' : '#FFFFFFD6'
+        'Rest' : '#FFFFFFD6'
     };
 
-    const team_names = Object.keys(team_colors)
 
     //console.log(Object.keys(team_colors))
 
@@ -55,7 +67,7 @@
     const myYears = arrayRange(2000,2022,1);
 
 
-    var mydata = d3.csv("transformed_data/winners_only_wide.csv")
+    var mydata = d3.csv("transformed_data/wide_top3.csv")
 
 
     mydata.then(function(data) {
@@ -92,6 +104,8 @@
             .keys(subgroups).order(d3.stackOrderInsideOut)
             (data)
 
+        //console.log(stackedData)
+
 
 
         // TOOLTIP
@@ -112,7 +126,6 @@
             const subgroupName = d3.select(this.parentNode).datum().key; //get team name
             const subgroupValue = parseFloat(d.data[subgroupName]).toFixed(2); //round to 2 dec
 
-            console.log(subgroupName)
 
             // Reduce opacity of all rect to 0.2
             d3.selectAll(".myRect").style("opacity", 0.2)
@@ -122,7 +135,6 @@
             //d3.select(".myRect."+subgroupName).style("opacity",1)
 
             d3.select(".myRect."+subgroupName).style("opacity",1)
-            d3.select(".legend."+subgroupName).style("opacity",1)
 
             d3.select(this).style('stroke','black')
             d3.select(this).style('stroke-width', 4)
@@ -133,9 +145,7 @@
                 .html("Team &nbsp &nbsp &nbsp &nbsp : " + subgroupName + "<br>" +
                         "%Points &nbsp &nbsp: " + subgroupValue + "</br>" +
                         "Year &nbsp &nbsp &nbsp &nbsp &nbsp: " + d.data.year)
-                .style("opacity", 1)
-                .style("left", (d3.mouse(this)[0]+70) + "px")
-                .style("top", (d3.mouse(this)[1]) + "px");
+                .style("opacity", 1);
 
 
 
@@ -162,17 +172,26 @@
 
 
         // Show the bars
-        const bars = svg.append("g")
+
+
+            const bars = svg.append("g")
             .selectAll("g")
             // Enter in the stack data = loop key per key = group per group
             .data(stackedData)
             .join("g")
+            .attr("id", "barchart")
             .attr("fill", d => team_colors[d.key])
             .attr("class", d => "myRect " + d.key)
             .selectAll("rect")
             // enter a second time = loop subgroup per subgroup to add all rectangles
             .data(d => d)
             .join("rect")
+            .on("mouseover", mouseover)
+            .on("mousemove", mousemove)
+            .on("mouseleave", mouseleave);
+
+        bars
+           // .transition()
                 .attr("x", d =>  x(d.data.year))
                 .attr("y", d => y(d[1]))
                 .attr("height", d => y(d[0]) - y(d[1]))
@@ -180,20 +199,12 @@
                 .attr("stroke", "grey")
                 .attr("stroke-width", 2);
 
-
-        bars
-            .on("mouseover", mouseover)
-            .on("mousemove", mousemove)
-            .on("mouseleave", mouseleave)
-
-
         svg.append("text")
             .attr("x", (width / 2))
             .attr("y", 0 - (margin.top / 2))
             .attr("text-anchor", "middle")
             .style("font-size", "20px")
-            .text("% Total Season Points Earned by F1 Teams, 2000-2022");
-
+            .text("% Total Season Points Earned by Winning F1 Teams, 2000-2022");
 
         var legend_size = 20
         var legend_x = 800
@@ -211,9 +222,7 @@
             .attr("height", legend_size)
             .style("fill", function(d){ return team_colors[d]})
             .attr("class", function(d){return 'legend'+d})
-        .on("mouseover", mouseover)
-        .on("mousemove", mousemove)
-        .on("mouseleave", mouseleave)
+
 
         svg.selectAll("mylabels")
             .data(Object.keys(team_colors))
@@ -224,6 +233,7 @@
             .text(function(d){ return d})
             .attr("text-anchor", "left")
             .style("alignment-baseline", "middle")
+
 
     });
 
